@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"runtime"
 	"time"
 )
@@ -27,12 +29,19 @@ func collectMetrics() Metrics {
 
 func main() {
 	for {
-		jsonData, err := json.MarshalIndent(collectMetrics(), "", "  ")
+		jsonData, err := json.Marshal(collectMetrics())
 		if err != nil {
 			fmt.Println("Error marshalling to json")
 			return
 		}
-		fmt.Println(string(jsonData))
+		//fmt.Println(string(jsonData))
+		resp, err := http.Post("http://localhost:8080/api/metrics", "application/json", bytes.NewBuffer(jsonData))
+		if err != nil {
+			fmt.Println("Не удалось отправить данные")
+		} else {
+			resp.Body.Close()
+			fmt.Println("Метрики отправлены, статус:", resp.Status)
+		}
 		time.Sleep(2 * time.Second)
 	}
 }
