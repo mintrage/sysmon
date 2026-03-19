@@ -1,9 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type Metrics struct {
@@ -12,7 +16,11 @@ type Metrics struct {
 	AllocRAM uint64 `json:"alloc_ram"`
 }
 
-func metricsHandler(w http.ResponseWriter, r *http.Request) {
+type App struct {
+	DB *sql.DB
+}
+
+func (a *App) metricsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Только POST", http.StatusMethodNotAllowed)
 		return
@@ -27,11 +35,26 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/api/metrics", metricsHandler)
-	fmt.Println("Server started succesfully")
-	err := http.ListenAndServe(":8080", nil)
+	dsn := "postgres://postgres:12345678@localhost:5432/sysmon"
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		fmt.Println("Error starting server")
+		log.Fatal(err)
+	}
+	defer db.Close()
+	err = db.Ping()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Успешное подключение к БД!")
+	app := App{
+		DB: db,
+	}
+
+	http.HandleFunc("/api/metrics", app.metricsHandler)
+	fmt.Println("Server started succesfully on port 8080...")
+	err = http.ListenAndServe(":8080", nil)
+	if err != nil {
+		fmt.Println("Error starting server:", err)
 	}
 
 }
