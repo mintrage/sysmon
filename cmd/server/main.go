@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -82,10 +87,35 @@ func main() {
 	http.HandleFunc("/api/metrics", app.metricsHandler)
 	http.HandleFunc("/api/metrics/latest", app.latestMetricsHandler)
 
-	fmt.Println("Server started succesfully on port 8080...")
-	err = http.ListenAndServe(":8080", nil)
-	if err != nil {
-		fmt.Println("Error starting server:", err)
+	srv := &http.Server{
+		Addr: ":8080",
 	}
+
+	go func() {
+		err := srv.ListenAndServe()
+		if err != nil {
+			if err != http.ErrServerClosed {
+				log.Fatalf("Ошибка сервера: %v", err)
+				return
+			}
+		}
+	}()
+
+	fmt.Println("Server started succesfully on port 8080...")
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	fmt.Println("Получен сигнал на завершение, выключаем сервер...")
+
+	ctx := context.Background()
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+	err = srv.Shutdown(ctxWithTimeout)
+	if err != nil {
+		log.Fatal("Принудительное завершение сервера:", err)
+	}
+
+	fmt.Println("Сервер успешно и безопасно остановлен.")
 
 }
