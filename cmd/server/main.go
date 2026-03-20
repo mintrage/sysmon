@@ -40,6 +40,24 @@ func (a *App) metricsHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (a *App) latestMetricsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Только GET", http.StatusMethodNotAllowed)
+		return
+	}
+	selectSQL := "SELECT os, cpus, alloc_ram FROM metrics ORDER BY id DESC LIMIT 1"
+	var m Metrics
+	row := a.DB.QueryRow(selectSQL)
+	err := row.Scan(&m.OS, &m.CPUs, &m.AllocRAM)
+	if err != nil {
+		http.Error(w, "Query error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(m)
+
+}
+
 func main() {
 	dsn := "postgres://postgres:12345678@localhost:5432/sysmon"
 	db, err := sql.Open("pgx", dsn)
@@ -62,6 +80,8 @@ func main() {
 	}
 
 	http.HandleFunc("/api/metrics", app.metricsHandler)
+	http.HandleFunc("/api/metrics/latest", app.latestMetricsHandler)
+
 	fmt.Println("Server started succesfully on port 8080...")
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
