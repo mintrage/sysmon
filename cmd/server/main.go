@@ -31,7 +31,13 @@ func (a *App) metricsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат JSON", http.StatusBadRequest)
 		return
 	}
-	fmt.Printf("Получены метрики: %+v\n", m)
+	insertSQL := "INSERT INTO metrics (os, cpus, alloc_ram) VALUES ($1, $2, $3)"
+	_, err = a.DB.Exec(insertSQL, m.OS, m.CPUs, m.AllocRAM)
+	if err != nil {
+		http.Error(w, "Ошибка БД", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func main() {
@@ -42,6 +48,11 @@ func main() {
 	}
 	defer db.Close()
 	err = db.Ping()
+	if err != nil {
+		log.Fatal(err)
+	}
+	sql := "CREATE TABLE IF NOT EXISTS metrics (id SERIAL PRIMARY KEY, os VARCHAR(50), cpus INT, alloc_ram BIGINT);"
+	_, err = db.Exec(sql)
 	if err != nil {
 		log.Fatal(err)
 	}
