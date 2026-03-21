@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,56 +12,9 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/mintrage/sysmon/internal/models"
+	"github.com/mintrage/sysmon/internal/handler"
+	"github.com/mintrage/sysmon/internal/storage"
 )
-
-// type Metrics struct {
-// 	OS       string `json:"os"`
-// 	CPUs     int    `json:"cpus"`
-// 	AllocRAM uint64 `json:"alloc_ram"`
-// }
-
-type App struct {
-	DB *sql.DB
-}
-
-func (a *App) metricsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Только POST", http.StatusMethodNotAllowed)
-		return
-	}
-	var m models.Metrics
-	err := json.NewDecoder(r.Body).Decode(&m)
-	if err != nil {
-		http.Error(w, "Неверный формат JSON", http.StatusBadRequest)
-		return
-	}
-	// insertSQL := "INSERT INTO metrics (os, cpus, alloc_ram) VALUES ($1, $2, $3)"
-	// _, err = a.DB.Exec(insertSQL, m.OS, m.CPUs, m.AllocRAM)
-	// if err != nil {
-	// 	http.Error(w, "Ошибка БД", http.StatusInternalServerError)
-	// 	return
-	// }
-	w.WriteHeader(http.StatusOK)
-}
-
-func (a *App) latestMetricsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Только GET", http.StatusMethodNotAllowed)
-		return
-	}
-	// selectSQL := "SELECT os, cpus, alloc_ram FROM metrics ORDER BY id DESC LIMIT 1"
-	// var m models.Metrics
-	// row := a.DB.QueryRow(selectSQL)
-	// err := row.Scan(&m.OS, &m.CPUs, &m.AllocRAM)
-	// if err != nil {
-	// 	http.Error(w, "Query error", http.StatusInternalServerError)
-	// 	return
-	// }
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(m)
-
-}
 
 func main() {
 	dsn := "postgres://postgres:12345678@localhost:5432/sysmon"
@@ -81,12 +33,13 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("Успешное подключение к БД!")
-	app := App{
-		DB: db,
-	}
 
-	http.HandleFunc("/api/metrics", app.metricsHandler)
-	http.HandleFunc("/api/metrics/latest", app.latestMetricsHandler)
+	store := &storage.Storage{DB: db}
+
+	h := &handler.Handler{Storage: store}
+
+	http.HandleFunc("/api/metrics", h.MetricsHandler)
+	http.HandleFunc("/api/metrics/latest", h.LatestMetricsHandler)
 
 	srv := &http.Server{
 		Addr: ":8080",
