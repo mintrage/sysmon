@@ -13,13 +13,14 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/mintrage/sysmon/internal/models"
 )
 
-type Metrics struct {
-	OS       string `json:"os"`
-	CPUs     int    `json:"cpus"`
-	AllocRAM uint64 `json:"alloc_ram"`
-}
+// type Metrics struct {
+// 	OS       string `json:"os"`
+// 	CPUs     int    `json:"cpus"`
+// 	AllocRAM uint64 `json:"alloc_ram"`
+// }
 
 type App struct {
 	DB *sql.DB
@@ -30,7 +31,7 @@ func (a *App) metricsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Только POST", http.StatusMethodNotAllowed)
 		return
 	}
-	var m Metrics
+	var m models.Metrics
 	err := json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
 		http.Error(w, "Неверный формат JSON", http.StatusBadRequest)
@@ -51,7 +52,7 @@ func (a *App) latestMetricsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	selectSQL := "SELECT os, cpus, alloc_ram FROM metrics ORDER BY id DESC LIMIT 1"
-	var m Metrics
+	var m models.Metrics
 	row := a.DB.QueryRow(selectSQL)
 	err := row.Scan(&m.OS, &m.CPUs, &m.AllocRAM)
 	if err != nil {
