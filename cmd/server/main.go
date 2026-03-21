@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	sql := "CREATE TABLE IF NOT EXISTS metrics (id SERIAL PRIMARY KEY, os VARCHAR(50), cpus INT, alloc_ram BIGINT);"
+	sql := "CREATE TABLE IF NOT EXISTS metrics (id SERIAL PRIMARY KEY, server_name VARCHAR(50), os VARCHAR(50), cpus INT, alloc_ram BIGINT);"
 	_, err = db.Exec(sql)
 	if err != nil {
 		log.Fatal(err)

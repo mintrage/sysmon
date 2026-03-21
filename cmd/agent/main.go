@@ -11,30 +11,43 @@ import (
 )
 
 type Metrics struct {
-	OS       string `json:"os"`
-	CPUs     int    `json:"cpus"`
-	AllocRAM uint64 `json:"alloc_ram"`
+	ServerName string `json:"server_name"`
+	OS         string `json:"os"`
+	CPUs       int    `json:"cpus"`
+	AllocRAM   uint64 `json:"alloc_ram"`
 }
 
-func collectMetrics() Metrics {
+func collectMetrics(name string) Metrics {
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
 	return Metrics{
-		OS:       runtime.GOOS,
-		CPUs:     runtime.NumCPU(),
-		AllocRAM: m.Alloc,
+		ServerName: name,
+		OS:         runtime.GOOS,
+		CPUs:       runtime.NumCPU(),
+		AllocRAM:   m.Alloc,
 	}
 }
 
 func main() {
+	agentName := os.Getenv("SYSMON_AGENT_NAME")
+	if agentName == "" {
+		host, err := os.Hostname()
+		if err != nil {
+			agentName = "unknown-agent"
+		} else {
+			agentName = host
+		}
+	}
+
 	serverURL := os.Getenv("SYSMON_SERVER_URL")
 	if serverURL == "" {
 		serverURL = "http://localhost:8080/api/metrics"
 	}
+
 	for {
-		jsonData, err := json.Marshal(collectMetrics())
+		jsonData, err := json.Marshal(collectMetrics(agentName))
 		if err != nil {
 			fmt.Println("Error marshalling to json")
 			return
