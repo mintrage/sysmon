@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	dsn := "postgres://postgres:12345678@localhost:5432/sysmon"
+	dsn := "postgres://postgres:12345678@db:5432/sysmon"
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		log.Fatal(err)
