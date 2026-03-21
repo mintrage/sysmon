@@ -37,12 +37,12 @@ func (a *App) metricsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат JSON", http.StatusBadRequest)
 		return
 	}
-	insertSQL := "INSERT INTO metrics (os, cpus, alloc_ram) VALUES ($1, $2, $3)"
-	_, err = a.DB.Exec(insertSQL, m.OS, m.CPUs, m.AllocRAM)
-	if err != nil {
-		http.Error(w, "Ошибка БД", http.StatusInternalServerError)
-		return
-	}
+	// insertSQL := "INSERT INTO metrics (os, cpus, alloc_ram) VALUES ($1, $2, $3)"
+	// _, err = a.DB.Exec(insertSQL, m.OS, m.CPUs, m.AllocRAM)
+	// if err != nil {
+	// 	http.Error(w, "Ошибка БД", http.StatusInternalServerError)
+	// 	return
+	// }
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -51,14 +51,14 @@ func (a *App) latestMetricsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Только GET", http.StatusMethodNotAllowed)
 		return
 	}
-	selectSQL := "SELECT os, cpus, alloc_ram FROM metrics ORDER BY id DESC LIMIT 1"
-	var m models.Metrics
-	row := a.DB.QueryRow(selectSQL)
-	err := row.Scan(&m.OS, &m.CPUs, &m.AllocRAM)
-	if err != nil {
-		http.Error(w, "Query error", http.StatusInternalServerError)
-		return
-	}
+	// selectSQL := "SELECT os, cpus, alloc_ram FROM metrics ORDER BY id DESC LIMIT 1"
+	// var m models.Metrics
+	// row := a.DB.QueryRow(selectSQL)
+	// err := row.Scan(&m.OS, &m.CPUs, &m.AllocRAM)
+	// if err != nil {
+	// 	http.Error(w, "Query error", http.StatusInternalServerError)
+	// 	return
+	// }
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(m)
 
