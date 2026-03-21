@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"runtime"
 	"time"
 )
@@ -28,6 +29,10 @@ func collectMetrics() Metrics {
 }
 
 func main() {
+	serverURL := os.Getenv("SYSMON_SERVER_URL")
+	if serverURL == "" {
+		serverURL = "http://localhost:8080/api/metrics"
+	}
 	for {
 		jsonData, err := json.Marshal(collectMetrics())
 		if err != nil {
@@ -35,7 +40,7 @@ func main() {
 			return
 		}
 		//fmt.Println(string(jsonData))
-		resp, err := http.Post("http://localhost:8080/api/metrics", "application/json", bytes.NewBuffer(jsonData))
+		resp, err := http.Post(serverURL, "application/json", bytes.NewBuffer(jsonData))
 		if err != nil {
 			fmt.Println("Не удалось отправить данные")
 		} else {
