@@ -36,7 +36,10 @@ func main() {
 
 	store := &storage.Storage{DB: db}
 
-	h := &handler.Handler{Storage: store}
+	h := &handler.Handler{
+		Storage:  store,
+		LastSeen: make(map[string]time.Time),
+	}
 
 	http.HandleFunc("/api/metrics", h.MetricsHandler)
 	http.HandleFunc("/api/metrics/latest", h.LatestMetricsHandler)

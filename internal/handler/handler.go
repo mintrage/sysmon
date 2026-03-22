@@ -3,13 +3,17 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/mintrage/sysmon/internal/models"
 	"github.com/mintrage/sysmon/internal/storage"
 )
 
 type Handler struct {
-	Storage *storage.Storage
+	Storage  *storage.Storage
+	LastSeen map[string]time.Time
+	Mu       sync.RWMutex
 }
 
 func (h *Handler) MetricsHandler(w http.ResponseWriter, r *http.Request) {
@@ -24,6 +28,10 @@ func (h *Handler) MetricsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат JSON", http.StatusBadRequest)
 		return
 	}
+
+	h.Mu.Lock()
+	h.LastSeen[m.ServerName] = time.Now()
+	h.Mu.Unlock()
 
 	err = h.Storage.SaveMetric(m)
 	if err != nil {
