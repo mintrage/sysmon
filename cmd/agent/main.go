@@ -9,34 +9,36 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
 type Metrics struct {
-	ServerName string `json:"server_name"`
-	OS         string `json:"os"`
-	CPUs       int    `json:"cpus"`
-	AllocRAM   uint64 `json:"alloc_ram"`
+	ServerName string  `json:"server_name"`
+	OS         string  `json:"os"`
+	CPUUsage   float64 `json:"cpu_usage"`
+	AllocRAM   uint64  `json:"alloc_ram"`
 }
 
 func collectMetrics(name string) Metrics {
 
-	v, err := mem.VirtualMemory()
-	if err != nil {
-		fmt.Println("")
-		return Metrics{
-			ServerName: name,
-			OS:         runtime.GOOS,
-			CPUs:       runtime.NumCPU(),
-			AllocRAM:   0,
-		}
+	v, errMem := mem.VirtualMemory()
+	c, errCPU := cpu.Percent(0, false)
+	var cpuUsage float64
+	if errCPU == nil && len(c) > 0 {
+		cpuUsage = c[0]
+	}
+
+	alloc := uint64(0)
+	if errMem == nil {
+		alloc = v.Used
 	}
 
 	return Metrics{
 		ServerName: name,
 		OS:         runtime.GOOS,
-		CPUs:       runtime.NumCPU(),
-		AllocRAM:   v.Used,
+		CPUUsage:   cpuUsage,
+		AllocRAM:   alloc,
 	}
 }
 
