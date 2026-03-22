@@ -8,6 +8,8 @@ import (
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 type Metrics struct {
@@ -19,14 +21,22 @@ type Metrics struct {
 
 func collectMetrics(name string) Metrics {
 
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		fmt.Println("")
+		return Metrics{
+			ServerName: name,
+			OS:         runtime.GOOS,
+			CPUs:       runtime.NumCPU(),
+			AllocRAM:   0,
+		}
+	}
 
 	return Metrics{
 		ServerName: name,
 		OS:         runtime.GOOS,
 		CPUs:       runtime.NumCPU(),
-		AllocRAM:   m.Alloc,
+		AllocRAM:   v.Used,
 	}
 }
 
