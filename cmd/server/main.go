@@ -13,6 +13,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/mintrage/sysmon/internal/handler"
+	"github.com/mintrage/sysmon/internal/notifier"
 	"github.com/mintrage/sysmon/internal/storage"
 )
 
@@ -43,6 +44,40 @@ func main() {
 
 	http.HandleFunc("/api/metrics", h.MetricsHandler)
 	http.HandleFunc("/api/metrics/latest", h.LatestMetricsHandler)
+
+	tgToken := os.Getenv("TG_TOKEN")
+	tgChatID := os.Getenv("TG_CHAT_ID")
+
+	if tgToken == "" || tgChatID == "" {
+		fmt.Println("⚠️ Переменные TG_TOKEN или TG_CHAT_ID не заданы. Алерты в Telegram отключены.")
+	} else {
+		go func() {
+			ticker := time.NewTicker(30 * time.Second)
+			notified := make(map[string]bool)
+			for range ticker.C {
+				var dead []string
+				var recovered []string
+				h.Mu.RLock()
+				for name, lastTime := range h.LastSeen {
+					if time.Since(lastTime) > 1*time.Minute && !notified[name] {
+						dead = append(dead, name)
+						notified[name] = true
+					} else if time.Since(lastTime) <= 1*time.Minute && notified[name] {
+						recovered = append(recovered, name)
+						notified[name] = false
+					}
+				}
+				h.Mu.RUnlock()
+				for _, name := range dead {
+					notifier.SendAlert(tgToken, tgChatID, fmt.Sprintf("🚨 Сервер %s упал!", name))
+				}
+				for _, name := range recovered {
+					notifier.SendAlert(tgToken, tgChatID, fmt.Sprintf("✅ Сервер %s снова в строю!", name))
+				}
+			}
+		}()
+		fmt.Println("✅ Telegram-алерты активированы!")
+	}
 
 	srv := &http.Server{
 		Addr: ":8080",
